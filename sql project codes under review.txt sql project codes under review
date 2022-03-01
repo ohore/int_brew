@@ -1,0 +1,289 @@
+create table breweries(
+	SALES_ID INT PRIMARY KEY,
+	SALES_REP VARCHAR(150),
+	EMAILS VARCHAR(150),
+	BRANDS VARCHAR(50),
+	PLANT_COST	NUMERIC,
+	UNIT_PRICE NUMERIC,
+	QUANTITY INT,
+	COSTS	BIGINT,
+	PROFIT	NUMERIC,
+	COUNTRIES CHAR(20),
+	REGION 	CHAR(20),
+	MONTHS	CHAR(100),
+	YEARS INT
+)
+
+alter table breweries
+alter column UNIT_PRICE type NUMERIC
+
+select * from breweries
+
+select distinct countries from breweries
+
+									--SECTION A--
+
+/*
+1. Within the space of the last three years, what was the profit worth of the breweries,
+inclusive of the anglophone and the francophone territories?
+*/
+
+SELECT countries
+AS anglophone_and_francophone_countries,
+SUM(profit) 
+AS profit
+FROM breweries
+GROUP BY countries
+ORDER  BY 2 DESC;
+
+
+/*2. Compare the total profit between these two territories in order for the territory manager,
+Mr. Stone make a strategic decision that will aid profit maximization in 2020
+*/
+SELECT
+CASE
+	WHEN (countries = 'Ghana' OR countries ='Nigeria') THEN 'Anglophone'
+	ELSE 'Francophone'
+END AS territory,
+SUM(profit) AS total_profit 
+FROM breweries
+GROUP BY 1
+ORDER BY SUM(profit) DESC; 
+ 
+/* 
+3. Country that generated the highest profit in 2019
+*/
+
+SELECT years, countries, SUM(profit) 
+FROM breweries
+WHERE years = 2019
+GROUP BY  countries, years
+ORDER BY SUM(profit) DESC
+LIMIT 1;
+
+/*
+4. Help him find the year with the highest profit.
+*/
+
+SELECT  years, SUM(profit) AS profit 
+FROM breweries
+GROUP BY years
+ORDER BY SUM (profit) DESC
+LIMIT 1;
+
+
+/*
+5. Which month in the three years was the least profit generated?
+*/
+
+SELECT years, months, SUM(profit)
+FROM breweries
+GROUP  BY years, months
+ORDER BY SUM(profit) ASC
+limit 1
+
+
+/*
+6. What was the minimum profit in the month of December 2018?
+*/
+
+SELECT months, years, MIN(profit) 
+FROM breweries
+WHERE months = 'December' AND years = 2018
+GROUP BY  months, years
+ORDER BY MIN(profit) ASC;
+
+/*
+7. Compare the profit in percentage for each of the month in 2019
+*/
+
+SELECT t1.months, ROUND(SUM(t1.profit_percentage),0) AS monthly_percentage,t1.years FROM 
+	(SELECT months, (100*profit/sum(profit)over()) AS profit_percentage, years FROM breweries
+	 where years = 2019 
+	 group by 1, 3, profit
+	 order by 1) AS t1
+group by 1,3
+order by 2 DESC;
+
+
+/*
+8. Which particular brand generated the highest profit in Senegal?
+*/
+SELECT brands, countries, SUM(profit) 
+FROM breweries
+WHERE countries ILIKE '%senegal%'
+GROUP BY brands, countries
+ORDER BY SUM (profit) DESC
+LIMIT 1
+					--SECTION B--
+
+/* 
+1. Within the last two years, the brand manager wants to know the top three brands
+consumed in the francophone countries
+*/
+
+SELECT t1.top_brands, SUM(t1.total_quantity_consumed) 
+FROM
+	(SELECT years, brands AS top_brands, countries,
+	 SUM(quantity) AS total_quantity_consumed 
+	 FROM breweries
+	 WHERE countries ='Benin' or countries ='Togo' or countries = 'Senegal' AND years = 2018 OR years = 2019
+	 GROUP BY  1,2,3
+	 ORDER BY SUM(quantity)DESC)t1
+GROUP BY 1
+order by 2 desc
+LIMIT 3
+
+
+SELECT t1.top_brands, SUM(t1.total_quantity_consumed) 
+FROM
+	(SELECT years, brands AS top_brands, countries,
+	 SUM(quantity) AS total_quantity_consumed 
+	 FROM breweries
+	 WHERE countries IN('Benin','Togo' ,'Senegal') AND years IN(2018 ,2019)
+	 GROUP BY  1,2,3
+	 ORDER BY SUM(quantity)DESC)t1
+GROUP BY 1
+order by 2 desc
+LIMIT 3
+
+
+SELECT brands, countries, years,SUM(quantity)
+FROM breweries
+WHERE countries ='Benin' OR countries = 'Togo' OR countries = 'Senegal'
+GROUP BY 1,2,3
+HAVING YEARS BETWEEN 2018 AND 2019
+ORDER BY 4 DESC
+LIMIT 3
+
+/*
+2. Find out the top two choice of consumer brands in Ghana
+*/
+
+SELECT brands AS top_brands, countries, 
+SUM(quantity) AS total_quantity_consumed FROM breweries
+WHERE countries = 'Ghana'
+GROUP BY brands, countries
+ORDER BY SUM(quantity) DESC
+LIMIT 2
+
+/*
+3. Find out the details of beers consumed in the past three years in the most oil reached
+country in West Africa.
+*/
+
+SELECT brands AS beer_brands, countries AS oil_country,
+	SUM(quantity)AS total_quantity 
+	FROM breweries
+	WHERE countries IN ('Nigeria') 
+	AND brands IN ('eagle lager', 'hero','castle lite','budweiser','trophy')
+	AND years IN (2017,2018,2019)
+	GROUP BY 1,2
+	ORDER BY 3
+
+/*
+4. Favorites malt brand in Anglophone region between 2018 and 2019
+*/
+select SUM(t1.total_quantity), t1.favourite_malt_brand from 
+	(SELECT years, brands AS favourite_malt_brand,countries AS anglophone_region,
+	 SUM(quantity) AS total_quantity
+	 FROM breweries
+	 WHERE brands IN ('beta malt','grand malt')
+	 AND countries IN ('Nigeria','Ghana')
+	 AND years in (2018, 2019)
+	 GROUP BY  1,2,3
+	 ORDER BY SUM(quantity) DESC)t1
+GROUP BY 2
+ORDER BY 2 desc
+
+select SUM(t1.total_quantity), t1.favourite_malt_brand from 
+	(SELECT years, brands AS favourite_malt_brand,countries AS anglophone_region,
+	 SUM(quantity) AS total_quantity
+	 FROM breweries
+	 WHERE countries ='Nigeria' OR countries ='Ghana'
+	 AND years Between 2018 AND 2019
+	 GROUP BY  1,2,3
+	 HAVING brands ='beta malt' OR brands ='grand malt'
+	 ORDER BY SUM(quantity) DESC)t1
+GROUP BY 2
+ORDER BY 2 desc
+
+
+--5)
+
+select years,brands, countries, sum(quantity) from breweries
+where countries = 'Nigeria' and years = 2019
+group by 1,2,3
+order by sum(quantity)DESC
+limit 1
+
+--6)
+select brands, region, countries,sum(quantity) from breweries 
+where region = 'southsouth' and countries = 'Nigeria'
+group by 1,2,3
+order by sum(quantity) desc
+limit 1
+
+--7)
+
+select brands, countries, SUM(quantity) as total_beer_consumption FROM breweries
+where brands in ('trophy', 'budweiser', 'castle lite','hero','eagle lager') 
+and countries = 'Nigeria'
+group by brands, countries
+
+--8)--
+select countries, brands, sum(quantity) as level_of_comsumption from breweries
+where brands = 'budweiser' and countries ='Nigeria'
+group by 1, 2
+
+--9)--
+select countries, brands,years, sum(quantity) as level_of_comsumption from breweries
+where brands = 'budweiser' and countries ='Nigeria' and years ='2019'
+group by 1, 2,3
+
+--section c-- 
+
+/*
+1. Country with the highest consumption of beer.
+*/
+Select t1.countries, SUM(t1.total_beer_consumption) 
+FROM
+	(select brands, countries, SUM(quantity) as total_beer_consumption FROM breweries
+	where brands in ('trophy', 'budweiser', 'castle lite','hero','eagle lager') 
+	group by brands, countries
+	order by sum(quantity) desc)t1
+GROUP BY 1
+ORDER BY 2 DESC
+
+SELECT countries, SUM(quantity) AS quantity_consumed
+FROM breweries
+WHERE brands != 'grand malt' AND brands != 'beta malt'
+group by 1
+order by 2 DESC
+
+ --2)
+ 
+select sales_rep, brands, sum(quantity) from breweries
+where brands = 'budweiser' AND countries = 'Senegal'
+group by 1,2
+order by sum(quantity) desc
+limit 1
+
+/*
+3. Country with the highest profit of the fourth quarter in 2019
+*/
+
+SELECT t1.countries ,SUM(t1.total_profit)
+FROM
+	(select countries, months , years, sum(profit) AS total_profit from breweries
+	 WHERE months = 'October' or months = 'November' or months = 'December' AND years = 2019
+	 group by 1,2,3
+	 order by sum(profit) desc) t1
+GROUP BY 1
+ORDER BY 2 DESC
+
+SELECT countries, SUM(profit)
+FROM breweries
+WHERE months = 'October' or months = 'November' or months = 'December' AND years = 2019
+GROUP BY 1
+ORDER BY 2 DESC
